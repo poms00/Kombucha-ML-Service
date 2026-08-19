@@ -1,10 +1,32 @@
+import json
+import os
+
 import firebase_admin
 from firebase_admin import credentials, db
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-cred = credentials.Certificate(PROJECT_ROOT / "firebase" / "serviceAccountKey.json")
+
+
+def firebase_credential() -> credentials.Base:
+    """Load Railway credentials from an environment variable or local development file."""
+    service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if service_account_json:
+        try:
+            return credentials.Certificate(json.loads(service_account_json))
+        except json.JSONDecodeError as error:
+            raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_JSON must contain valid JSON.") from error
+
+    credential_path = PROJECT_ROOT / "firebase" / "serviceAccountKey.json"
+    if not credential_path.is_file():
+        raise RuntimeError(
+            "Firebase credentials are missing. Set FIREBASE_SERVICE_ACCOUNT_JSON in the deployment environment."
+        )
+    return credentials.Certificate(credential_path)
+
+
+cred = firebase_credential()
 
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
