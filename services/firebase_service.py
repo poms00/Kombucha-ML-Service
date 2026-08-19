@@ -42,6 +42,12 @@ def get_sensors(fermentator_id: str):
     return ref.get()
 
 
+def save_sensors(fermentator_id: str, sensor_data: dict) -> None:
+    """Write the latest sensor readings for a fermentator."""
+    ref = db.reference(f"fermentators/{fermentator_id}/sensors")
+    ref.set(sensor_data)
+
+
 def get_fermentator_ids() -> tuple[str, ...]:
     """Return every fermentator currently registered in Firebase."""
     fermentators = db.reference("fermentators").get()

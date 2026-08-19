@@ -18,6 +18,7 @@ from services.firebase_service import (
     get_fermentator_ids,
     get_sensors,
     save_analytics,
+    save_sensors,
     save_training_sample,
 )
 from services.xgboost_service import predict_fermentation
@@ -57,6 +58,13 @@ class FermentationPredictionRequest(BaseModel):
     temperature_liquid: float = Field(ge=-20, le=100, description="Suhu cairan dalam Celsius")
     co2: float = Field(ge=0, description="Pembacaan sensor CO2")
     ph: float = Field(ge=0, le=14, description="Nilai pH cairan")
+
+
+class SensorDataRequest(BaseModel):
+    temperature_liquid: float = Field(ge=-20, le=100, description="Suhu cairan dalam Celsius")
+    co2: float = Field(ge=0, description="Pembacaan sensor CO2")
+    ph: float = Field(ge=0, le=14, description="Nilai pH cairan")
+    timestamp: str | None = Field(default=None, description="Waktu pembacaan sensor")
 
 
 class TrainingSampleRequest(FermentationPredictionRequest):
@@ -197,6 +205,27 @@ def root() -> dict[str, Any]:
         "analytics_worker": "running" if worker and not worker.done() else "stopped",
         "analytics_interval_seconds": ANALYTICS_INTERVAL_SECONDS,
     }
+
+
+@app.post(
+    "/fermentators/{fermentator_id}/sensors",
+    status_code=status.HTTP_201_CREATED,
+    tags=["sensors"],
+)
+def update_sensors(fermentator_id: str, payload: SensorDataRequest) -> dict[str, Any]:
+    sensor_data = {
+        "temperature_liquid": payload.temperature_liquid,
+        "co2": payload.co2,
+        "ph": payload.ph,
+        "timestamp": payload.timestamp or utc_now(),
+    }
+    try:
+        save_sensors(fermentator_id, sensor_data)
+    except Exception as error:
+        logger.exception("[%s] Sensor gagal disimpan ke Firebase", fermentator_id)
+        raise HTTPException(status_code=503, detail="Firebase tidak dapat diakses.") from error
+
+    return {"status": "saved", "fermentator_id": fermentator_id, "sensor": sensor_data}
 
 
 @app.get("/fermentators/{fermentator_id}/sensors", tags=["sensors"])
