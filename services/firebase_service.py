@@ -36,7 +36,7 @@ if not firebase_admin._apps:
 
 def get_sensors(fermentator_id: str):
     ref = db.reference(
-        f"fermentators/{fermentator_id}/current/sensors"
+        f"fermentators/{fermentator_id}/sensors"
     )
 
     return ref.get()
