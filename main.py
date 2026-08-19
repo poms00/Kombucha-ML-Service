@@ -14,14 +14,18 @@ from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from services.dataset_service import append_training_sample
-from services.firebase_service import get_sensors, save_analytics, save_training_sample
+from services.firebase_service import (
+    get_fermentator_ids,
+    get_sensors,
+    save_analytics,
+    save_training_sample,
+)
 from services.xgboost_service import predict_fermentation
 
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 logger = logging.getLogger("kombucha_api")
 
-DEFAULT_FERMENTATORS = ("kombucha_3",)
 WIB = timezone(timedelta(hours=7), name="WIB")
 
 
@@ -34,7 +38,7 @@ def _analytics_interval() -> int:
 
 FERMENTATOR_IDS = tuple(
     fermentator_id.strip()
-    for fermentator_id in os.getenv("FERMENTATOR_IDS", ",".join(DEFAULT_FERMENTATORS)).split(",")
+    for fermentator_id in os.getenv("FERMENTATOR_IDS", "").split(",")
     if fermentator_id.strip()
 )
 ANALYTICS_INTERVAL_SECONDS = _analytics_interval()
@@ -140,13 +144,25 @@ async def process_analytics(fermentator_id: str) -> None:
 
 
 async def analytics_worker() -> None:
+    mode = "configured IDs" if FERMENTATOR_IDS else "Firebase discovery"
     logger.info(
-        "Analytics worker berjalan untuk %s (interval %s detik)",
-        ", ".join(FERMENTATOR_IDS),
+        "Analytics worker berjalan dengan %s (interval %s detik)",
+        mode,
         ANALYTICS_INTERVAL_SECONDS,
     )
     while True:
-        await asyncio.gather(*(process_analytics(fermentator_id) for fermentator_id in FERMENTATOR_IDS))
+        fermentator_ids = FERMENTATOR_IDS
+        if not fermentator_ids:
+            try:
+                fermentator_ids = await asyncio.to_thread(get_fermentator_ids)
+            except Exception:
+                logger.exception("Daftar fermentator gagal dibaca dari Firebase")
+                fermentator_ids = ()
+
+        if fermentator_ids:
+            await asyncio.gather(*(process_analytics(fermentator_id) for fermentator_id in fermentator_ids))
+        else:
+            logger.warning("Belum ada fermentator yang terdaftar untuk diproses")
         await asyncio.sleep(ANALYTICS_INTERVAL_SECONDS)
 
 

@@ -42,6 +42,14 @@ def get_sensors(fermentator_id: str):
     return ref.get()
 
 
+def get_fermentator_ids() -> tuple[str, ...]:
+    """Return every fermentator currently registered in Firebase."""
+    fermentators = db.reference("fermentators").get()
+    if not isinstance(fermentators, dict):
+        return ()
+    return tuple(sorted(key for key, value in fermentators.items() if isinstance(key, str) and isinstance(value, dict)))
+
+
 def save_training_sample(fermentator_id: str, sample: dict) -> str:
     """Store a labelled observation so the training data can be audited in Firebase."""
     ref = db.reference(f"fermentators/{fermentator_id}/training_samples")
