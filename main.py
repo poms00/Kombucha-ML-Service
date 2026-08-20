@@ -81,10 +81,12 @@ class TrainingSampleRequest(FermentationPredictionRequest):
 
 def sensor_payload(sensor_data: dict[str, Any]) -> FermentationPredictionRequest:
     """Validate Firebase readings before they reach the model."""
+    # Accept both "temperature_liquid" and "temperature" as the liquid temperature field.
+    temperature = sensor_data.get("temperature_liquid", sensor_data.get("temperature"))
     try:
         payload = FermentationPredictionRequest.model_validate(
             {
-                "temperature_liquid": sensor_data.get("temperature_liquid"),
+                "temperature_liquid": temperature,
                 "co2": sensor_data.get("co2"),
                 "ph": sensor_data.get("ph"),
             }
