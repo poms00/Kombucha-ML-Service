@@ -31,11 +31,11 @@ WIB = timezone(timedelta(hours=7), name="WIB")
 
 # Estimated days remaining until harvest for each fermentation stage.
 STAGE_TO_HARVEST_DAYS: dict[str, int] = {
-    "BELUM_FERMENTASI": 10,
-    "FERMENTASI_AWAL": 8,
-    "FERMENTASI_AKTIF": 5,
-    "FERMENTASI_LANJUT": 2,
-    "MATANG": 0,
+    "NOT_STARTED": 10,
+    "STARTING_FERMENTATION": 8,
+    "ACTIVE_FERMENTATION": 5,
+    "OPTIMAL_FERMENTATION": 2,
+    "OVER_FERMENTED": 1,
 }
 
 
@@ -87,9 +87,18 @@ class FermentationPredictionRequest(BaseModel):
 
 
 class SensorDataRequest(BaseModel):
-    temperature_liquid: float = Field(ge=-20, le=100, description="Suhu cairan dalam Celsius")
-    co2: float = Field(ge=0, description="Pembacaan sensor CO2")
-    ph: float = Field(ge=0, le=14, description="Nilai pH cairan")
+    """Sensor payload used by the sensors endpoint.
+
+    The individual sensors are nullable on purpose: a missing/null reading is
+    stored as-is and never imputed with 0. Incomplete records are later handled
+    by :func:`build_analytics` as ``INSUFFICIENT_DATA``.
+    """
+
+    temperature_liquid: float | None = Field(
+        default=None, ge=-20, le=100, description="Suhu cairan dalam Celsius"
+    )
+    co2: float | None = Field(default=None, ge=0, description="Pembacaan sensor CO2")
+    ph: float | None = Field(default=None, ge=0, le=14, description="Nilai pH cairan")
     timestamp: str | None = Field(default=None, description="Waktu pembacaan sensor")
 
 
@@ -126,10 +135,47 @@ def sensor_payload(sensor_data: dict[str, Any]) -> FermentationPredictionRequest
     return payload
 
 
+def _has_complete_sensor_data(sensor_data: dict[str, Any]) -> bool:
+    """Return True only when every model feature has a finite, non-null value."""
+    temperature = sensor_data.get("temperature_liquid", sensor_data.get("temperature"))
+    co2 = sensor_data.get("co2")
+    ph = sensor_data.get("ph")
+
+    for value in (temperature, co2, ph):
+        if value is None:
+            return False
+        if not isinstance(value, (int, float)):
+            return False
+        if not math.isfinite(value):
+            return False
+    return True
+
+
 def build_analytics(fermentator_id: str, sensor_data: dict[str, Any]) -> dict[str, Any]:
-    """Build a Firebase-ready analytics record without inventing missing values."""
+    """Build a Firebase-ready analytics record without inventing missing values.
+
+    When any sensor reading is null/missing/finite, no XGBoost prediction is
+    attempted and the stage is reported as INSUFFICIENT_DATA with a confidence
+    of 0. The record is still returned so analytics can be persisted to Firebase.
+    """
     prediction_time = predicted_at()
     sensor_timestamp = sensor_data.get("timestamp")
+    temperature = sensor_data.get("temperature_liquid", sensor_data.get("temperature"))
+    co2 = sensor_data.get("co2")
+    ph = sensor_data.get("ph")
+
+    if not _has_complete_sensor_data(sensor_data):
+        return {
+            "fermentator_id": fermentator_id,
+            "predicted_at": prediction_time,
+            "status": "INSUFFICIENT_DATA",
+            "fermentation_stage": "INSUFFICIENT_DATA",
+            "confidence": 0.0,
+            "temperature_liquid": temperature,
+            "co2": co2,
+            "ph": ph,
+            "sensor_timestamp": sensor_timestamp,
+        }
 
     try:
         payload = sensor_payload(sensor_data)
@@ -137,9 +183,12 @@ def build_analytics(fermentator_id: str, sensor_data: dict[str, Any]) -> dict[st
         return {
             "fermentator_id": fermentator_id,
             "predicted_at": prediction_time,
-            "status": "INSUFFICIENT_SENSOR_DATA",
-            "fermentation_stage": "WAITING_SENSOR",
+            "status": "INSUFFICIENT_DATA",
+            "fermentation_stage": "INSUFFICIENT_DATA",
             "confidence": 0.0,
+            "temperature_liquid": temperature,
+            "co2": co2,
+            "ph": ph,
             "sensor_timestamp": sensor_timestamp,
         }
 

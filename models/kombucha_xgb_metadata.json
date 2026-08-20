@@ -1,5 +1,5 @@
 {
-  "model_version": "kombucha-xgb-20260819T083855Z",
+  "model_version": "kombucha-xgb-20260820T063955Z",
   "feature_names": [
     "temperature_liquid",
     "co2",
@@ -7,14 +7,14 @@
   ],
   "label_name": "fermentation_stage",
   "classes": [
-    "BELUM_FERMENTASI",
-    "FERMENTASI_AKTIF",
-    "FERMENTASI_AWAL",
-    "FERMENTASI_LANJUT",
-    "MATANG"
+    "ACTIVE_FERMENTATION",
+    "NOT_STARTED",
+    "OPTIMAL_FERMENTATION",
+    "OVER_FERMENTED",
+    "STARTING_FERMENTATION"
   ],
   "training_rows": 2000,
   "holdout_rows": 400,
-  "holdout_accuracy": 0.845,
-  "trained_at": "2026-08-19T08:38:55.750394+00:00"
+  "holdout_accuracy": 0.8975,
+  "trained_at": "2026-08-20T06:39:55.747964+00:00"
 }

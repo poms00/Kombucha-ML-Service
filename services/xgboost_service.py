@@ -33,28 +33,52 @@ def _load_model() -> tuple[Any, dict[str, Any]]:
 model, model_metadata = _load_model()
 
 
+def _probability_vector(features: np.ndarray):
+    """Return the raw class-probability vector for a single feature row."""
+    if isinstance(model, xgb.Booster):
+        # Booster trained with multi:softprob already returns 0..1 probabilities.
+        probabilities = model.predict(xgb.DMatrix(features, feature_names=list(FEATURE_NAMES)))
+        # In some layouts predict may return a 1-D vector for a single class;
+        # reshape so it is always 2-D (n_samples, n_classes).
+        probabilities = np.atleast_2d(probabilities)
+    elif hasattr(model, "predict_proba"):
+        probabilities = np.atleast_2d(np.asarray(model.predict_proba(features), dtype=np.float64))
+    else:
+        raise ValueError("Format model tidak mendukung prediksi probabilitas.")
+
+    return probabilities[0]
+
+
 def predict_fermentation(temperature_liquid: float, co2: float, ph: float) -> dict[str, Any]:
-    """Predict a fermentation stage and its model confidence."""
+    """Predict a fermentation stage and its model confidence.
+
+    The class probabilities always come from the model's soft probabilities
+    (``predict_proba``), so ``confidence`` is the probability of the winning
+    class and ``probabilities`` mirrors that same output. No threshold rule is
+    applied: the classifier combines temperature_liquid, co2, and ph.
+    """
     values = (temperature_liquid, co2, ph)
     if not all(isinstance(value, (int, float)) and math.isfinite(value) for value in values):
         raise ValueError("temperature_liquid, co2, dan ph harus berupa angka yang valid.")
 
     features = np.asarray([values], dtype=np.float32)
-    classes = model_metadata["classes"]
+    classes = list(model_metadata["classes"])
 
-    if isinstance(model, xgb.Booster):
-        probabilities = model.predict(xgb.DMatrix(features, feature_names=list(FEATURE_NAMES)))[0]
-        prediction_index = int(np.argmax(probabilities))
-        fermentation_stage = classes[prediction_index]
-    elif hasattr(model, "predict_proba"):
-        probabilities = model.predict_proba(features)[0]
-        prediction_index = int(np.argmax(probabilities))
-        fermentation_stage = str(model.predict(features)[0])
-    else:
-        raise ValueError("Format model tidak mendukung prediksi probabilitas.")
+    probabilities = _probability_vector(features)
+    prediction_index = int(np.argmax(probabilities))
+    fermentation_stage = classes[prediction_index]
+    confidence = float(probabilities[prediction_index])
+
+    # Normalize / clip to guard against tiny float drift (e.g. 0.99999997).
+    confidence = round(float(np.clip(confidence, 0.0, 1.0)), 4)
+    prob_dict = {
+        class_name: round(float(np.clip(probabilities[index], 0.0, 1.0)), 6)
+        for index, class_name in enumerate(classes)
+    }
 
     return {
         "fermentation_stage": fermentation_stage,
-        "confidence": round(float(probabilities[prediction_index]), 4),
+        "confidence": confidence,
+        "probabilities": prob_dict,
         "model_version": model_metadata["model_version"],
     }
