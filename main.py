@@ -29,6 +29,32 @@ logger = logging.getLogger("kombucha_api")
 
 WIB = timezone(timedelta(hours=7), name="WIB")
 
+# Estimated days remaining until harvest for each fermentation stage.
+STAGE_TO_HARVEST_DAYS: dict[str, int] = {
+    "BELUM_FERMENTASI": 10,
+    "FERMENTASI_AWAL": 8,
+    "FERMENTASI_AKTIF": 5,
+    "FERMENTASI_LANJUT": 2,
+    "MATANG": 0,
+}
+
+
+def harvest_estimate(stage: str) -> dict[str, Any] | None:
+    """Return estimated harvest date and remaining time for a predicted stage."""
+    days = STAGE_TO_HARVEST_DAYS.get(stage)
+    if days is None:
+        return None
+
+    now = datetime.now(WIB)
+    harvest = now + timedelta(days=days)
+    total_hours = days * 24
+    return {
+        "estimated_harvest_time": harvest.strftime("%d-%m-%Y %H:%M WIB"),
+        "days_remaining": days,
+        "hours_remaining": total_hours,
+        "status": "SIAP_PANEN" if days == 0 else f"{total_hours // 24} hari {total_hours % 24} jam",
+    }
+
 
 def _analytics_interval() -> int:
     try:
@@ -122,7 +148,7 @@ def build_analytics(fermentator_id: str, sensor_data: dict[str, Any]) -> dict[st
         co2=payload.co2,
         ph=payload.ph,
     )
-    return {
+    analytics = {
         "predicted_at": prediction_time,
         "fermentator_id": fermentator_id,
         "status": "PREDICTED",
@@ -130,6 +156,13 @@ def build_analytics(fermentator_id: str, sensor_data: dict[str, Any]) -> dict[st
         "confidence": prediction["confidence"],
         "sensor_timestamp": sensor_timestamp,
     }
+    harvest = harvest_estimate(prediction["fermentation_stage"])
+    if harvest is not None:
+        analytics["estimated_harvest_time"] = harvest["estimated_harvest_time"]
+        analytics["days_remaining"] = harvest["days_remaining"]
+        analytics["hours_remaining"] = harvest["hours_remaining"]
+        analytics["harvest_status"] = harvest["status"]
+    return analytics
 
 
 async def process_analytics(fermentator_id: str) -> None:
