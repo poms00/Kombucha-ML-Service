@@ -135,8 +135,8 @@ def build_analytics(fermentator_id: str, sensor_data: dict[str, Any]) -> dict[st
         payload = sensor_payload(sensor_data)
     except ValueError:
         return {
-            "predicted_at": prediction_time,
             "fermentator_id": fermentator_id,
+            "predicted_at": prediction_time,
             "status": "INSUFFICIENT_SENSOR_DATA",
             "fermentation_stage": "WAITING_SENSOR",
             "confidence": 0.0,
@@ -149,8 +149,8 @@ def build_analytics(fermentator_id: str, sensor_data: dict[str, Any]) -> dict[st
         ph=payload.ph,
     )
     analytics = {
-        "predicted_at": prediction_time,
         "fermentator_id": fermentator_id,
+        "predicted_at": prediction_time,
         "status": "PREDICTED",
         "fermentation_stage": prediction["fermentation_stage"],
         "confidence": prediction["confidence"],
