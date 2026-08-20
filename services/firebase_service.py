@@ -30,7 +30,7 @@ cred = firebase_credential()
 
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred, {
-        "databaseURL": "https://kombucha-83c73-default-rtdb.asia-southeast1.firebasedatabase.app"
+        "databaseURL": "https://smart-kombucha-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
     })
 
 

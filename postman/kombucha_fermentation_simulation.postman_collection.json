@@ -1,0 +1,353 @@
+{
+  "info": {
+    "name": "Kombucha Fermentation Simulation",
+    "description": "Simulasi fermentasi kombucha dari awal sampai akhir. Collection ini mengirim data sensor bertahap (suhu, CO2, pH) ke endpoint POST /fermentators/{id}/sensors, lalu memanggil endpoint analytics untuk melihat hasil prediksi tahap fermentasi.\n\nBase URL: https://kombucha-ml-service-production.up.railway.app",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://kombucha-ml-service-production.up.railway.app"
+    },
+    {
+      "key": "fermentatorId",
+      "value": "kombucha_3"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Kirim Sensor - Awal Fermentasi (Hari 0-1)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set('temp', 25.0);",
+              "pm.variables.set('co2', 300);",
+              "pm.variables.set('ph', 6.5);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature_liquid\": {{temp}},\n  \"co2\": {{co2}},\n  \"ph\": {{ph}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/fermentators/{{fermentatorId}}/sensors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "fermentators",
+            "{{fermentatorId}}",
+            "sensors"
+          ]
+        },
+        "description": "Mengirim data sensor tahap awal fermentasi (suhu ruang, CO2 rendah, pH netral)."
+      }
+    },
+    {
+      "name": "2. Kirim Sensor - Fermentasi Aktif (Hari 2-4)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set('temp', 28.5);",
+              "pm.variables.set('co2', 900);",
+              "pm.variables.set('ph', 5.2);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature_liquid\": {{temp}},\n  \"co2\": {{co2}},\n  \"ph\": {{ph}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/fermentators/{{fermentatorId}}/sensors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "fermentators",
+            "{{fermentatorId}}",
+            "sensors"
+          ]
+        },
+        "description": "Mengirim data sensor tahap fermentasi aktif (suhu naik, CO2 meningkat, pH turun)."
+      }
+    },
+    {
+      "name": "3. Kirim Sensor - Fermentasi Lanjut (Hari 5-7)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set('temp', 30.0);",
+              "pm.variables.set('co2', 1500);",
+              "pm.variables.set('ph', 3.8);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature_liquid\": {{temp}},\n  \"co2\": {{co2}},\n  \"ph\": {{ph}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/fermentators/{{fermentatorId}}/sensors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "fermentators",
+            "{{fermentatorId}}",
+            "sensors"
+          ]
+        },
+        "description": "Mengirim data sensor tahap fermentasi lanjut (suhu stabil, CO2 tinggi, pH asam)."
+      }
+    },
+    {
+      "name": "4. Kirim Sensor - Fermentasi Akhir (Hari 8-10)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.variables.set('temp', 26.0);",
+              "pm.variables.set('co2', 1100);",
+              "pm.variables.set('ph', 3.0);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature_liquid\": {{temp}},\n  \"co2\": {{co2}},\n  \"ph\": {{ph}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/fermentators/{{fermentatorId}}/sensors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "fermentators",
+            "{{fermentatorId}}",
+            "sensors"
+          ]
+        },
+        "description": "Mengirim data sensor tahap akhir fermentasi (suhu turun, CO2 menurun, pH sangat asam)."
+      }
+    },
+    {
+      "name": "5. Lihat Hasil Analytics",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "pm.test('Analytics tersedia', function () {",
+              "    pm.expect(json).to.have.property('temperature_liquid');",
+              "    pm.expect(json).to.have.property('co2');",
+              "    pm.expect(json).to.have.property('ph');",
+              "});",
+              "",
+              "console.log('Data sensor:', JSON.stringify(json));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/fermentators/{{fermentatorId}}/sensors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "fermentators",
+            "{{fermentatorId}}",
+            "sensors"
+          ]
+        },
+        "description": "Melihat data sensor terakhir yang tersimpan di Firebase."
+      }
+    },
+    {
+      "name": "6. Prediksi & Simpan Analytics",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "pm.test('Prediksi berhasil', function () {",
+              "    pm.expect(json).to.have.property('fermentation_stage');",
+              "    pm.expect(json).to.have.property('confidence');",
+              "});",
+              "",
+              "console.log('Hasil prediksi:', json.fermentation_stage, '| confidence:', json.confidence);",
+              "if (json.estimated_harvest_time) {",
+              "    console.log('Estimasi panen:', json.estimated_harvest_time);",
+              "    console.log('Sisa waktu:', json.harvest_status, '(' + json.days_remaining + ' hari / ' + json.hours_remaining + ' jam)');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/fermentators/{{fermentatorId}}/analytics/predict",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "fermentators",
+            "{{fermentatorId}}",
+            "analytics",
+            "predict"
+          ]
+        },
+        "description": "Memanggil endpoint untuk memprediksi tahap fermentasi dari data sensor terakhir dan menyimpannya ke Firebase."
+      }
+    },
+    {
+      "name": "7. Simulasi Otomatis (Awal ke Akhir)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const step = pm.variables.get('simStep') ? parseInt(pm.variables.get('simStep')) : 0;",
+              "",
+              "const data = [",
+              "    [25.0, 300, 6.5],",
+              "    [26.5, 500, 6.0],",
+              "    [28.0, 750, 5.5],",
+              "    [29.0, 1000, 5.0],",
+              "    [30.0, 1300, 4.5],",
+              "    [30.5, 1500, 4.0],",
+              "    [30.0, 1600, 3.6],",
+              "    [29.0, 1500, 3.3],",
+              "    [27.5, 1300, 3.1],",
+              "    [26.0, 1100, 3.0]",
+              "];",
+              "",
+              "const point = data[step % data.length];",
+              "pm.variables.set('temp', point[0]);",
+              "pm.variables.set('co2', point[1]);",
+              "pm.variables.set('ph', point[2]);",
+              "pm.variables.set('simStep', step + 1);",
+              "",
+              "console.log('Simulasi hari ke-' + step + ':', 'suhu=' + point[0] + ', CO2=' + point[1] + ', pH=' + point[2]);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "pm.test('Sensor tersimpan', function () {",
+              "    pm.expect(json.status).to.eql('saved');",
+              "});",
+              "",
+              "const step = parseInt(pm.variables.get('simStep'));",
+              "if (step >= 10) {",
+              "    console.log('Simulasi selesai: 10 titik data terkirim dari awal ke akhir fermentasi.');",
+              "    console.log('Jalankan request 6 untuk melihat hasil akhir.');",
+              "} else {",
+              "    console.log('Lanjutkan ke titik data berikutnya (hari ke-' + step + ').');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"temperature_liquid\": {{temp}},\n  \"co2\": {{co2}},\n  \"ph\": {{ph}}\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/fermentators/{{fermentatorId}}/sensors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "fermentators",
+            "{{fermentatorId}}",
+            "sensors"
+          ]
+        },
+        "description": "Simulasi otomatis: jalankan request ini berulang kali (10x) untuk mengirim data sensor dari awal ke akhir fermentasi."
+      }
+    }
+  ]
+}
